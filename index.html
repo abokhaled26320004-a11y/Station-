@@ -659,5 +659,49 @@
   pullStateFromCloud().then(evaluateAlertsAndUI);
 })();
 </script>
+  <script>
+(function () {
+  const DRIVER_PIN = "0122";
+  const LOCK_KEY = "station_role_lock_v2";
+
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest("button, [role='button'], label, input[type='radio']");
+    if (!btn) return;
+
+    const label = (btn.innerText || btn.value || "").trim();
+    const isDriver = /سائق|السواق|سواقة|driver/i.test(label);
+    const isPassenger = /راكب|الراكب|passenger/i.test(label);
+    const lockedRole = localStorage.getItem(LOCK_KEY);
+
+    if (isDriver && lockedRole === "passenger") {
+      e.preventDefault();
+      e.stopPropagation();
+      alert("هذا الجهاز مثبت على وضع الراكب ولا يمكن تحويله إلى سائق.");
+      return;
+    }
+
+    if (isPassenger && lockedRole === "driver") {
+      e.preventDefault();
+      e.stopPropagation();
+      alert("هذا الجهاز مثبت على وضع السائق ولا يمكن تغييره إلى راكب.");
+      return;
+    }
+
+    if (isDriver && lockedRole !== "driver") {
+      const pin = prompt("أدخل الرقم السري الخاص بالسائق:");
+      if (pin !== DRIVER_PIN) {
+        e.preventDefault();
+        e.stopPropagation();
+        alert("الرقم السري غير صحيح.");
+        return;
+      }
+      localStorage.setItem(LOCK_KEY, "driver");
+    } else if (isPassenger && !lockedRole) {
+      localStorage.setItem(LOCK_KEY, "passenger");
+    }
+  }, true);
+})();
+</script>
+
 </body>
 </html>
