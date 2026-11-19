@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>باص جسر السويس - GPS (حي) (v3)</title>
+
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          crossorigin=""></script>
+
+  <style>
+    :root {
+      --bg:#f1f5f9; --card:#fff; --ink:#0f172a; --muted:#64748b;
+      --primary:#0284c7; --primary-dark:#0369a1; --success:#16a34a;
+      --warning:#d97706; --danger:#dc2626; --border:#e2e8f0; --radius:16px;
+    }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body {
+      margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,
+      "Noto Sans Arabic",Tahoma,Arial,sans-serif; background:var(--bg);
+      color:var(--ink); min-height:100vh; padding-bottom:36px;
+    }
+    .topbar { background:#0f172a; color:#fff; padding:12px 16px; position:sticky;
+      top:0; z-index:900; box-shadow:0 4px 16px rgba(15,23,42,.18); }
+    .topbar-inner { max-width:780px; margin:auto; display:flex; align-items:center;
+      justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .brand { display:flex; align-items:center; gap:10px; }
+    .brand-badge { width:38px;height:38px;border-radius:12px;
+      background:linear-gradient(135deg,#0ea5e9,#2563eb); display:grid;
+      place-items:center;font-size:19px;flex-shrink:0; }
+    .brand h1 { margin:0;font-size:15px;font-weight:800;line-height:1.25; }
+    .brand-sub { font-size:11.5px;color:#cbd5e1;margin-top:2px; }
+    .top-actions { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+    .pill { font-size:11.5px;padding:5px 10px;border-radius:999px;font-weight:700;
+      display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);
+      color:#f8fafc;border:1px solid rgba(255,255,255,.14); }
+    .dot { width:8px;height:8px;border-radius:50%;background:#22c55e; }
+    .dot.warn { background:#f59e0b; } .dot.off { background:#94a3b8; }
+    .btn-top { background:rgba(255,255,255,.12);color:#fff;
+      border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:6px 11px;
+      font-size:12px;font-weight:700;cursor:pointer; }
+    .btn-top:hover { background:rgba(255,255,255,.2); }
+    .container { max-width:780px;margin:14px auto 0;padding:0 12px; }
+    .card { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:16px;margin-bottom:14px;box-shadow:0 2px 10px rgba(15,23,42,.04); }
+    .hero { text-align:center;padding:20px 16px; }
+    .tag-chip { display:inline-block;background:#e0f2fe;color:#0369a1;font-weight:800;
+      font-size:12px;padding:5px 12px;border-radius:999px;margin-bottom:10px; }
+    .hero h2 { margin:0 0 6px;font-size:21px;font-weight:900; }
+    .hero p { margin:0 auto 16px;max-width:560px;color:var(--muted);font-size:13.5px;line-height:1.6; }
+    .room-box { background:#f8fafc;border:1px solid var(--border);border-radius:14px;
+      padding:12px;margin-bottom:16px;text-align:right; }
+    .room-row { display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px; }
+    label { display:block;font-size:12.5px;font-weight:700;color:#334155;margin-bottom:5px; }
+    input[type="text"],input[type="number"],select,textarea {
+      width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:11px;
+      font-size:14px;font-family:inherit;background:#fff;color:var(--ink);
+    }
+    input:focus,select:focus,textarea:focus { outline:none;border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(2,132,199,.14); }
+    .role-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:12px; }
+    @media (max-width:560px) { .role-grid,.row-2 { grid-template-columns:1fr; } }
+    .role-card { border:2px solid var(--border);border-radius:16px;padding:18px 14px;
+      text-align:center;cursor:pointer;background:#fff;transition:.12s ease; }
+    .role-card:hover { transform:translateY(-2px);border-color:var(--primary);
+      box-shadow:0 8px 20px rgba(2,132,199,.12); }
+    .role-icon { font-size:34px;margin-bottom:8px; }
+    .role-title { font-size:17px;font-weight:900;margin-bottom:4px; }
+    .role-desc { font-size:12.5px;color:var(--muted);line-height:1.5; }
+    .btn { border:none;border-radius:12px;padding:11px 15px;font-size:14px;font-weight:800;
+      cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      transition:opacity .12s ease,transform .1s ease;font-family:inherit; }
+    .btn:active { transform:scale(.985); }
+    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-dark)}
+    .btn-success{background:var(--success);color:#fff}.btn-warning{background:var(--warning);color:#fff}
+    .btn-danger{background:var(--danger);color:#fff}.btn-soft{background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1}
+    .btn-block{width:100%}.btn-sm{padding:8px 12px;font-size:12.5px;border-radius:10px}
+    #map{width:100%;height:320px;border-radius:14px;border:1px solid var(--border);overflow:hidden;z-index:1}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+    .stat-box{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center}
+    .stat-label{font-size:11.5px;color:var(--muted)} .stat-val{font-size:16px;font-weight:900;margin-top:3px}
+    .alert-banner{border-radius:14px;padding:13px 14px;margin-bottom:12px;font-weight:700;
+      font-size:13.5px;line-height:1.55;border:1px solid transparent}
+    .alert-info{background:#e0f2fe;color:#0c4a6e;border-color:#bae6fd}
+    .alert-ok{background:#dcfce7;color:#14532d;border-color:#bbf7d0}
+    .alert-warn{background:#fef3c7;color:#78350f;border-color:#fde68a}
+    .alert-alarm{background:#fee2e2;color:#7f1d1d;border-color:#fecaca;animation:pulseAlarm .8s infinite alternate}
+    @keyframes pulseAlarm{from{box-shadow:0 0 0 0 rgba(220,38,38,.35)}to{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
+    .rider-item{border:1px solid var(--border);border-radius:13px;padding:12px;margin-bottom:10px;background:#f8fafc}
+    .rider-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+    .badge{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px}
+    .b-waiting{background:#fef3c7;color:#92400e}.b-boarded{background:#dcfce7;color:#166534}
+    .b-missed{background:#fee2e2;color:#991b1b}.b-idle{background:#e2e8f0;color:#334155}
+    .speech-preview{background:#0f172a;color:#f8fafc;border-radius:12px;padding:11px 13px;
+      font-size:13px;line-height:1.6;margin:8px 0 10px;border-right:4px solid #38bdf8}
+    .hidden{display:none!important}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1200;
+      display:flex;align-items:center;justify-content:center;padding:14px}
+    .modal-card{background:#fff;border-radius:18px;max-width:560px;width:100%;max-height:88vh;
+      overflow-y:auto;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+    .row-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .muted-note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px}
+    .diag-box{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:10px 12px;
+      font-size:12px;color:#334155;line-height:1.6;margin-top:10px}
+  </style>
+</head>
+
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-badge">🚐</div>
+      <div>
+        <h1>باص جسر السويس - GPS (حي)</h1>
+        <div class="brand-sub">كود الرحلة: <strong id="topRoomCode">GESR 2026</strong> • جاهز للتشغيل</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="pill"><span class="dot" id="syncDot"></span><span id="syncText">مزامنة بالرحلة</span></span>
+      <button class="btn-top" id="btnOpenRoomModal">الكود / الربط</button>
+      <button class="btn-top hidden" id="btnSwitchRole">تغيير الدور</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <section id="roleScreen" class="card hero">
+    <span class="tag-chip">GPS حقيقي • نطق صوتي • جاهز للعمل</span>
+    <h2>أهلاً بك على خط جسر السويس</h2>
+    <p>نسخة تشغيل جاهزة للاختبار العملي مع السواق والركاب: ربط فوري بالكود، تتبع GPS، تنبيه صوتي بالاسم قبل المحطة، وتأكيد الركوب أو فوات الباص.</p>
+
+    <div class="room-box">
+      <label for="quickRoomInput">كود الرحلة المشترك (نفس الكود عند السواق والركاب)</label>
+      <div class="room-row">
+        <input type="text" id="quickRoomInput" value="GESR 2026" style="flex:1;min-width:170px">
+        <button class="btn btn-soft btn-sm" id="btnCopyRoom">نسخ الكود</button>
+        <button class="btn btn-soft btn-sm" id="btnRunSelfCheck">فحص جاهزية الجهاز</button>
+      </div>
+      <div class="muted-note">بمجرد إدخال نفس الكود على موبايل السواق وموبايلك يبدأ الربط تلقائياً.</div>
+      <div id="selfCheckOutput" class="diag-box hidden"></div>
+    </div>
+
+    <div class="role-grid">
+      <div class="role-card" id="pickDriver">
+        <div class="role-icon">🚐</div>
+        <div class="role-title">أنا السواق</div>
+        <div class="role-desc">تشغيل GPS الفعلي أثناء المشوار واستقبال التنبيه الصوتي بالاسم قبل المحطة أو عند النداء.</div>
+      </div>
+      <div class="role-card" id="pickRider">
+        <div class="role-icon">🧍</div>
+        <div class="role-title">أنا راكب</div>
+        <div class="role-desc">تحديد محطتك على جسر السويس ومتابعة موقع السواق الفعلي وإرسال إشارة "مستنيك" أو "تم الركوب" أو "فوتني".</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="appScreen" class="hidden">
+    <div class="card" style="padding:12px">
+      <div id="map"></div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-label">المسافة للسواق</div><div class="stat-val" id="statDist">--</div></div>
+        <div class="stat-box"><div class="stat-label">الوقت المتوقع</div><div class="stat-val" id="statEta">--</div></div>
+        <div class="stat-box"><div class="stat-label">سرعة الـGPS</div><div class="stat-val" id="statSpeed">0 كم/س</div></div>
+      </div>
+      <div class="muted-note" id="gpsCoordsText">إحداثيات السواق: في انتظار تشغيل الـGPS...</div>
+      <div class="muted-note" id="lastSyncTimeText">آخر تحديث للرحلة: في الانتظار...</div>
+    </div>
+
+    <div id="driverPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <h3 style="margin:0;font-size:17px">لوحة السواق (GPS حي)</h3>
+        <span class="badge b-idle" id="driverStatusBadge">متوقف</span>
+      </div>
+      <div id="driverAlertBox" class="alert-banner alert-info">اضغط "بدء الرحلة" لتفعيل موقعك الفعلي GPS. يفضل اختبار الصوت مرة واحدة حتى يسمح المتصفح بالنطق الصوتي.</div>
+      <div class="row-2" style="margin-bottom:10px">
+        <button class="btn btn-success" id="btnStartGps">بدء الرحلة وتتبع الـGPS</button>
+        <button class="btn btn-danger hidden" id="btnStopGps">إنهاء الرحلة</button>
+        <button class="btn btn-soft" id="btnTestVoice">اختبار النطق الآن</button>
+      </div>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <label for="customPhraseInput">نص النداء الصوتي المخصص (يُستخدم الاسم والمحطة تلقائياً)</label>
+        <input type="text" id="customPhraseInput" placeholder="مثال: {name} في انتظارك عند {stop}">
+        <div class="muted-note">المتغيرات: <code>{name}</code> لاسم الراكب، <code>{stop}</code> للمحطة، <code>{dist}</code> للمسافة، <code>{note}</code> للملاحظة.</div>
+        <div class="speech-preview"><strong>النص الفعلي الذي سيتم نطقه:</strong><br><span id="speechPreviewText">عمرو في انتظارك عند مقابل الزعيم</span></div>
+        <div class="row-2">
+          <button class="btn btn-primary btn-sm" id="btnSavePhrase">حفظ وتطبيق النص فوراً</button>
+          <button class="btn btn-warning btn-sm hidden" id="btnAckAlert">إيقاف الإنذار / تأكيد الانتباه</button>
+        </div>
+        <div id="voiceDiagMsg" class="muted-note"></div>
+      </div>
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+        <h4 style="margin:0 0 8px;font-size:14.5px">الركاب المسجلون على الرحلة</h4>
+        <div id="driverRidersList"><div class="muted-note">لا يوجد ركاب متصلون حالياً على هذا الكود.</div></div>
+      </div>
+    </div>
+
+    <div id="riderPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <h3 style="margin:0;font-size:17px">لوحة الراكب - خط جسر السويس</h3>
+        <span class="badge b-idle" id="riderStatusBadge">في الانتظار</span>
+      </div>
+      <div id="riderFeedbackBox" class="alert-banner alert-info">سجل اسمك واختر محطتك على جسر السويس، ثم استخدم أزرار التنبيه أو تأكيد الركوب.</div>
+
+      <div class="row-2">
+        <div>
+          <label for="riderNameInput">اسمك (لينادي به السواق بصوت واضح)</label>
+          <input type="text" id="riderNameInput" placeholder="مثال: عمرو">
+        </div>
+        <div>
+          <label for="riderStopSelect">محطتك على جسر السويس</label>
+          <select id="riderStopSelect"></select>
+        </div>
+      </div>
+
+      <div class="row-2" style="margin-top:10px">
+        <div>
+          <label for="alertMetersInput">تنبيه السواق تلقائياً قبل محطتك بـ (متر)</label>
+          <input type="number" id="alertMetersInput" value="500" min="100" max="3000" step="50">
+        </div>
+        <div>
+          <label for="riderNoteInput">ملاحظة مكان الوقوف (اختياري)</label>
+          <input type="text" id="riderNoteInput" placeholder="مثال: هقف يمين بعد المحطة بـ 50 متر">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-soft btn-sm" id="btnUseMyLoc">تحديد موقعي الحالي بـGPS</button>
+        <button class="btn btn-primary btn-sm" id="btnSaveRiderProfile">حفظ بياناتي على الرحلة</button>
+      </div>
+
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+        <label>أزرار التواصل الفوري مع السواق</label>
+        <div class="row-2" style="margin-bottom:10px">
+          <button class="btn btn-warning" id="btnCallDriver">أنا مستنيك دلوقتي (نادي بالاسم)</button>
+          <button class="btn btn-success" id="btnBoarded">تم الركوب (صوت صح)</button>
+        </div>
+        <button class="btn btn-danger btn-block" id="btnMissedBus">فوتني / مركبتش (إنذار للسواق)</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="roomModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;font-size:17px">إعداد كود الرحلة والربط السحابي</h3>
+      <button class="btn btn-soft btn-sm" id="btnCloseModal">إغلاق</button>
+    </div>
+    <div class="alert-banner alert-info" style="margin-bottom:12px">
+      الوضع الافتراضي يربط الأجهزة بمجرد إدخال نفس <strong>كود الرحلة</strong>. ويمكن إضافة رابط Firebase Realtime Database الخاص بك إذا رغبت.
+    </div>
+    <label for="modalRoomInput">كود الرحلة المشترك</label>
+    <input type="text" id="modalRoomInput" value="GESR 2026" style="margin-bottom:10px">
+    <label for="modalFirebaseUrl">رابط Firebase Realtime Database (اختياري)</label>
+    <input type="text" id="modalFirebaseUrl" placeholder="https://your-project-default-rtdb.firebaseio.com" style="margin-bottom:6px">
+    <div class="muted-note" style="margin-bottom:14px">إذا تركته فارغاً سيستخدم التطبيق المزامنة المدمجة بالكود، مع fallback محلي بين التبويبات.</div>
+    <div class="row-2">
+      <button class="btn btn-primary" id="btnApplyRoomSettings">حفظ وتطبيق</button>
+      <button class="btn btn-soft" id="btnResetDefaultRoom">استعادة الافتراضي</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const STOPS = [
+    {id:"quba",name:"قباء",lat:30.1045,lng:31.3212},
+    {id:"awal_gamal",name:"أول جمال",lat:30.1098,lng:31.3264},
+    {id:"arbaeen",name:"الأربعين",lat:30.1152,lng:31.3318},
+    {id:"arab",name:"العرب",lat:30.1205,lng:31.3371},
+    {id:"garage",name:"الجراج",lat:30.1258,lng:31.3425},
+    {id:"nozha",name:"النزهة",lat:30.1304,lng:31.3474},
+    {id:"shams_club",name:"نادي الشمس",lat:30.1348,lng:31.3522},
+    {id:"opposite_zaeem",name:"مقابل الزعيم (مقابل ألف مسكن)",lat:30.1389,lng:31.3568},
+    {id:"at_zaeem",name:"عند الزعيم",lat:30.1404,lng:31.3584},
+    {id:"ishara",name:"الإشارة",lat:30.1449,lng:31.3632},
+    {id:"brazilian_coffee",name:"البن البرازيلي",lat:30.1492,lng:31.3679},
+    {id:"meriland",name:"الميريلاند",lat:30.1536,lng:31.3728},
+    {id:"tagneed",name:"التجنيد",lat:30.1585,lng:31.3782}
+  ];
+
+  const DEFAULT_PHRASE = "{name} في انتظارك عند {stop}";
+  const PUBLIC_SYNC_BASE = "https://kvdb.io/";
+
+  const state = {
+    role:null,
+    roomCode:localStorage.getItem("gesr_room_code") || "GESR 2026",
+    firebaseUrl:(localStorage.getItem("gesr_fb_url") || "").trim().replace(/\/+$/,""),
+    clientId:localStorage.getItem("gesr_client_id") || ("c_"+Math.random().toString(36).slice(2,10)),
+    driver:{
+      active:false,lat:null,lng:null,speedKmh:0,updatedAt:0,
+      phrase:localStorage.getItem("gesr_phrase") || DEFAULT_PHRASE,
+      alertActive:false,lastAlertReason:""
+    },
+    rider:{
+      id:localStorage.getItem("gesr_rider_id") || ("r_"+Math.random().toString(36).slice(2,10)),
+      name:localStorage.getItem("gesr_rider_name") || "عمرو",
+      stopId:localStorage.getItem("gesr_rider_stop") || "opposite_zaeem",
+      lat:null,lng:null,
+      alertMeters:Number(localStorage.getItem("gesr_alert_meters") || 500),
+      note:localStorage.getItem("gesr_rider_note") || "",
+      status:"idle",callCounter:Number(localStorage.getItem("gesr_call_counter") || 0),
+      updatedAt:Date.now()
+    },
+    ridersMap:{},spokenCallKey:"",lastSyncTs:0
+  };
+
+  localStorage.setItem("gesr_client_id",state.clientId);
+  localStorage.setItem("gesr_rider_id",state.rider.id);
+
+  const map = L.map("map",{zoomControl:true}).setView([30.1389,31.3568],13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {attribution:"&copy; OpenStreetMap"}).addTo(map);
+
+  L.polyline(STOPS.map(s=>[s.lat,s.lng]),{color:"#0284c7",weight:4,opacity:.75,dashArray:"6, 6"}).addTo(map);
+  STOPS.forEach(stop => L.circleMarker([stop.lat,stop.lng],
+    {radius:5,color:"#0f172a",fillColor:"#38bdf8",fillOpacity:.9,weight:1.5})
+    .addTo(map).bindTooltip(stop.name,{direction:"top"}));
+
+  let driverMarker=null,riderMarker=null,geofenceCircle=null,gpsWatchId=null,alarmInterval=null,audioCtx=null;
+
+  const stopSelect=document.getElementById("riderStopSelect");
+  STOPS.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=s.name;stopSelect.appendChild(o);});
+
+  const $ = id => document.getElementById(id);
+  $("quickRoomInput").value=state.roomCode;
+  $("modalRoomInput").value=state.roomCode;
+  $("modalFirebaseUrl").value=state.firebaseUrl;
+  $("topRoomCode").textContent=state.roomCode;
+  $("customPhraseInput").value=state.driver.phrase;
+  $("riderNameInput").value=state.rider.name;
+  stopSelect.value=state.rider.stopId;
+  $("alertMetersInput").value=state.rider.alertMeters;
+  $("riderNoteInput").value=state.rider.note;
+
+  function getStopById(id){return STOPS.find(s=>s.id===id)||STOPS[7];}
+  function haversineMeters(lat1,lon1,lat2,lon2){
+    const R=6371000,toRad=x=>x*Math.PI/180;
+    const dLat=toRad(lat2-lat1),dLon=toRad(lon2-lon1);
+    const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  }
+  function formatPhrase(template,riderObj,distMeters){
+    const stopObj=getStopById(riderObj.stopId);
+    const distText=Number.isFinite(distMeters) ? (distMeters>=1000 ? (distMeters/1000).toFixed(1)+" كيلومتر" : Math.round(distMeters)+" متر") : "";
+    return (template||DEFAULT_PHRASE)
+      .replace(/\{name\}/g,(riderObj.name||"راكب").trim())
+      .replace(/\{stop\}/g,stopObj.name)
+      .replace(/\{dist\}/g,distText)
+      .replace(/\{note\}/g,(riderObj.note||"").trim());
+  }
+  function updateSpeechPreview(){
+    const sampleRider={name:$("riderNameInput").value.trim()||"عمرو",stopId:stopSelect.value||"opposite_zaeem",note:$("riderNoteInput").value.trim()};
+    const dist=(state.driver.lat!=null&&state.driver.lng!=null)?haversineMeters(state.driver.lat,state.driver.lng,getStopById(sampleRider.stopId).lat,getStopById(sampleRider.stopId).lng):350;
+    $("speechPreviewText").textContent=formatPhrase($("customPhraseInput").value.trim()||DEFAULT_PHRASE,sampleRider,dist);
+  }
+  updateSpeechPreview();
+
+  function ensureAudio(){
+    if(!audioCtx){const Ctx=window.AudioContext||window.webkitAudioContext;if(Ctx)audioCtx=new Ctx();}
+    if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume().catch(()=>{});
+    return audioCtx;
+  }
+  function playChime(type){
+    const ctx=ensureAudio(); if(!ctx)return;
+    const now=ctx.currentTime,osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    if(type==="ok"){
+      osc.type="sine";osc.frequency.setValueAtTime(523.25,now);osc.frequency.setValueAtTime(659.25,now+.12);osc.frequency.setValueAtTime(783.99,now+.24);
+      gain.gain.setValueAtTime(.18,now);gain.gain.exponentialRampToValueAtTime(.001,now+.45);osc.start(now);osc.stop(now+.46);
+    }else if(type==="alarm"){
+      osc.type="sawtooth";osc.frequency.setValueAtTime(880,now);osc.frequency.setValueAtTime(587.33,now+.15);osc.frequency.setValueAtTime(880,now+.30);
+      gain.gain.setValueAtTime(.24,now);gain.gain.exponentialRampToValueAtTime(.001,now+.48);osc.start(now);osc.stop(now+.50);
+    }else{
+      osc.type="triangle";osc.frequency.setValueAtTime(660,now);osc.frequency.setValueAtTime(880,now+.14);
+      gain.gain.setValueAtTime(.16,now);gain.gain.exponentialRampToValueAtTime(.001,now+.32);osc.start(now);osc.stop(now+.34);
+    }
+  }
+  function speakArabic(text){
+    const clean=(text||"").trim(); if(!clean)return;
+    const diag=$("voiceDiagMsg");
+    if(!("speechSynthesis" in window)){if(diag)diag.textContent="المتصفح لا يدعم النطق الصوتي المباشر؛ تم تشغيل النغمة بدلاً منه.";return;}
+    try{
+      window.speechSynthesis.cancel();
+      const voices=window.speechSynthesis.getVoices()||[];
+      const ar=voices.find(v=>(v.lang||"").toLowerCase().startsWith("ar"));
+      const utter=new SpeechSynthesisUtterance(clean);
+      utter.lang=ar?ar.lang:"ar-EG";if(ar)utter.voice=ar;utter.rate=1;utter.pitch=1;utter.volume=1;
+      utter.onstart=()=>{if(diag)diag.textContent='تم نطق الجملة بنجاح: "'+clean+'"';};
+      utter.onerror=e=>{if(diag)diag.textContent="تعذر تشغيل الصوت العربي تلقائياً ("+(e.error||"unknown")+")؛ تحقق من صوت العربية في إعدادات الجهاز.";};
+      setTimeout(()=>{try{window.speechSynthesis.speak(utter);}catch(_){ }},40);
+    }catch(_){if(diag)diag.textContent="حدثت مشكلة أثناء النطق الصوتي؛ تم تشغيل النغمة.";}
+  }
+  function startAlarmLoop(text){
+    stopAlarmLoop();playChime("alarm");speakArabic(text);
+    if(navigator.vibrate)navigator.vibrate([350,180,350,180,500]);
+    alarmInterval=setInterval(()=>{playChime("alarm");speakArabic(text);if(navigator.vibrate)navigator.vibrate([300,150,300]);},3200);
+  }
+  function stopAlarmLoop(){if(alarmInterval){clearInterval(alarmInterval);alarmInterval=null;}}
+
+  const bcChannel="BroadcastChannel" in window?new BroadcastChannel("gesr_shuttle_channel"):null;
+  const localStorageKey=()=> "gesr_room_state_"+encodeURIComponent(state.roomCode.trim().toUpperCase()||"GESR 2026");
+
+  function setSyncIndicator(status,label){
+    $("syncText").textContent=label;
+    $("syncDot").className="dot "+(status==="ok"?"":status==="warn"?"warn":"off");
+    if(status==="ok"){
+      state.lastSyncTs=Date.now();
+      $("lastSyncTimeText").textContent="آخر تحديث للرحلة: "+new Date(state.lastSyncTs).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    }
+  }
+  function getRoomSnapshot(){
+    return {roomCode:state.roomCode,driver:{...state.driver},riders:{...state.ridersMap,[state.rider.id]:{...state.rider}},ts:Date.now()};
+  }
+  function applyRemoteSnapshot(snap){
+    if(!snap||!snap.roomCode||snap.roomCode.toUpperCase()!==state.roomCode.toUpperCase())return;
+    if(snap.driver){
+      const prevPhrase=state.driver.phrase,prevAlert=state.driver.alertActive;
+      state.driver={...state.driver,...snap.driver,phrase:state.role==="driver"?state.driver.phrase:(snap.driver.phrase||prevPhrase)};
+      if(state.role!=="driver")$("customPhraseInput").value=state.driver.phrase;
+      if(!state.driver.alertActive&&prevAlert)stopAlarmLoop();
+    }
+    if(snap.riders){
+      state.ridersMap={...snap.riders};
+      if(state.role==="rider"&&snap.riders[state.rider.id])state.rider.status=snap.riders[state.rider.id].status||state.rider.status;
+    }
+    evaluateAlertsAndUI();
+  }
+  async function pushStateToCloud(){
+    const snap=getRoomSnapshot(),cleanRoom=(state.roomCode||"GESR 2026").trim().toUpperCase();
+    try{localStorage.setItem(localStorageKey(),JSON.stringify(snap));}catch(_){}
+    if(bcChannel)bcChannel.postMessage({type:"STATE_UPDATE",roomCode:cleanRoom,snap});
+
+    if(state.firebaseUrl){
+      try{
+        await fetch(`${state.firebaseUrl}/rooms/${encodeURIComponent(cleanRoom)}.json`,
+          {method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(snap)});
+        setSyncIndicator("ok","مربوط بـFirebase");return;
+      }catch(_){setSyncIndicator("warn","تعذر الاتصال بـFirebase");}
+    }
+    try{
+      await fetch(`${PUBLIC_SYNC_BASE}gesr_shuttle_${encodeURIComponent(cleanRoom)}`,
+        {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(snap)});
+      setSyncIndicator("ok","مزامنة سحابية بالكود");
+    }catch(_){setSyncIndicator("warn","مزامنة محلية / تبويب");}
+  }
+  async function pullStateFromCloud(){
+    const cleanRoom=(state.roomCode||"GESR 2026").trim().toUpperCase();
+    if(state.firebaseUrl){
+      try{
+        const res=await fetch(`${state.firebaseUrl}/rooms/${encodeURIComponent(cleanRoom)}.json?t=${Date.now()}`);
+        if(res.ok){const data=await res.json();if(data){applyRemoteSnapshot(data);setSyncIndicator("ok","مربوط بـFirebase");return;}}
+      }catch(_){}
+    }
+    try{
+      const res=await fetch(`${PUBLIC_SYNC_BASE}gesr_shuttle_${encodeURIComponent(cleanRoom)}?t=${Date.now()}`);
+      if(res.ok){const data=await res.json();if(data&&data.ts){applyRemoteSnapshot(data);setSyncIndicator("ok","مزامنة سحابية بالكود");return;}}
+    }catch(_){}
+    try{const raw=localStorage.getItem(localStorageKey());if(raw)applyRemoteSnapshot(JSON.parse(raw));}catch(_){}
+  }
+  if(bcChannel)bcChannel.onmessage=ev=>{if(ev.data&&ev.data.type==="STATE_UPDATE"&&ev.data.roomCode===state.roomCode.toUpperCase())applyRemoteSnapshot(ev.data.snap);};
+  window.addEventListener("storage",ev=>{if(ev.key===localStorageKey()&&ev.newValue){try{applyRemoteSnapshot(JSON.parse(ev.newValue));}catch(_){}}});
+  setInterval(pullStateFromCloud,2500);
+
+  function escapeHtml(str){return String(str).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+
+  function evaluateAlertsAndUI(){
+    updateSpeechPreview();
+    const dLat=state.driver.lat,dLng=state.driver.lng;
+    const hasDriverPos=typeof dLat==="number"&&typeof dLng==="number"&&Number.isFinite(dLat)&&Number.isFinite(dLng);
+    if(hasDriverPos){
+      $("gpsCoordsText").textContent=`إحداثيات السواق: ${dLat.toFixed(5)}, ${dLng.toFixed(5)}`;
+      if(!driverMarker)driverMarker=L.circleMarker([dLat,dLng],{radius:9,color:"#0f172a",fillColor:"#16a34a",fillOpacity:1,weight:3}).addTo(map).bindPopup("موقع السواق الحالي (GPS)");
+      else driverMarker.setLatLng([dLat,dLng]);
+    }else $("gpsCoordsText").textContent="إحداثيات السواق: في انتظار تشغيل الـGPS من موبايل السواق...";
+    $("statSpeed").textContent=state.driver.speedKmh>1?`${Math.round(state.driver.speedKmh)} كم/س`:"0 كم/س";
+
+    const activeStop=getStopById(state.rider.stopId);
+    const refLat=typeof state.rider.lat==="number"?state.rider.lat:activeStop.lat;
+    const refLng=typeof state.rider.lng==="number"?state.rider.lng:activeStop.lng;
+
+    if(!riderMarker)riderMarker=L.circleMarker([refLat,refLng],{radius:7,color:"#0f172a",fillColor:"#f59e0b",fillOpacity:1,weight:2}).addTo(map).bindPopup(`نقطة الركوب: ${activeStop.name}`);
+    else riderMarker.setLatLng([refLat,refLng]).setPopupContent(`نقطة الركوب: ${activeStop.name}`);
+    if(!geofenceCircle)geofenceCircle=L.circle([refLat,refLng],{radius:state.rider.alertMeters||500,color:"#0284c7",fillColor:"#38bdf8",fillOpacity:.12,weight:1.5}).addTo(map);
+    else geofenceCircle.setLatLng([refLat,refLng]).setRadius(state.rider.alertMeters||500);
+
+    if(hasDriverPos){
+      const distM=haversineMeters(dLat,dLng,refLat,refLng);
+      $("statDist").textContent=distM>=1000?`${(distM/1000).toFixed(1)} كم`:`${Math.round(distM)} م`;
+      const etaSec=distM/(((state.driver.speedKmh>5?state.driver.speedKmh:35)*1000)/3600);
+      $("statEta").textContent=etaSec<60?`${Math.max(1,Math.round(etaSec))} ث`:`${Math.max(1,Math.round(etaSec/60))} د`;
+
+      if(state.role==="driver"&&state.driver.active&&distM<=(state.rider.alertMeters||500)&&state.rider.status!=="boarded"){
+        const phrase=formatPhrase(state.driver.phrase,{...state.rider},distM);
+        const key=`auto_${state.rider.id}_${activeStop.id}`;
+        if(state.spokenCallKey!==key){
+          state.spokenCallKey=key;playChime("call");speakArabic(phrase);
+          $("driverAlertBox").className="alert-banner alert-warn";
+          $("driverAlertBox").textContent=`اقتراب من محطة ${activeStop.name} (${Math.round(distM)} م) — ${phrase}`;
+        }
+      }
+    }else{$("statDist").textContent="--";$("statEta").textContent="--";}
+
+    if(state.role==="driver"){
+      $("driverStatusBadge").textContent=state.driver.active?"GPS نشط":"متوقف";
+      $("driverStatusBadge").className="badge "+(state.driver.active?"b-boarded":"b-idle");
+      const allRiders=Object.values(state.ridersMap||{}),list=$("driverRidersList");
+      if(!allRiders.length)list.innerHTML='<div class="muted-note">لا يوجد ركاب متصلون حالياً على هذا الكود.</div>';
+      else list.innerHTML=allRiders.map(r=>{
+        const st=getStopById(r.stopId),cls=r.status==="boarded"?"b-boarded":r.status==="missed"?"b-missed":r.status==="waiting"?"b-waiting":"b-idle";
+        const text=r.status==="boarded"?"✓ تم الركوب":r.status==="missed"?"! فوتني":r.status==="waiting"?"مستنيك":"في الانتظار";
+        return `<div class="rider-item"><div class="rider-head"><strong>${escapeHtml(r.name||"راكب")} — ${escapeHtml(st.name)}</strong><span class="badge ${cls}">${text}</span></div>${r.note?`<div class="muted-note">ملاحظة: ${escapeHtml(r.note)}</div>`:""}</div>`;
+      }).join("");
+
+      allRiders.forEach(r=>{
+        const callKey=`${r.id}_${r.status}_${r.callCounter||0}`;
+        if(r.status==="waiting"&&(r.callCounter||0)>0&&state.spokenCallKey!==callKey){
+          state.spokenCallKey=callKey;
+          const distNow=hasDriverPos?haversineMeters(dLat,dLng,getStopById(r.stopId).lat,getStopById(r.stopId).lng):null;
+          const phrase=formatPhrase(state.driver.phrase,r,distNow);
+          playChime("call");speakArabic(phrase);
+          $("driverAlertBox").className="alert-banner alert-warn";
+          $("driverAlertBox").textContent=`نداء راكب: ${phrase}`;
+        }else if(r.status==="missed"&&state.spokenCallKey!==callKey){
+          state.spokenCallKey=callKey;state.driver.alertActive=true;
+          $("btnAckAlert").classList.remove("hidden");
+          $("driverAlertBox").className="alert-banner alert-alarm";
+          $("driverAlertBox").textContent=`إنذار! ${r.name||"الراكب"} فوتته المحطة عند ${getStopById(r.stopId).name}`;
+          startAlarmLoop(`انتباه، ${r.name||"راكب"} فوتته المحطة عند ${getStopById(r.stopId).name}`);
+        }else if(r.status==="boarded"&&state.spokenCallKey!==callKey){
+          state.spokenCallKey=callKey;stopAlarmLoop();state.driver.alertActive=false;$("btnAckAlert").classList.add("hidden");
+          playChime("ok");speakArabic(`تمام، ${r.name||"الراكب"} ركب`);
+          $("driverAlertBox").className="alert-banner alert-ok";
+          $("driverAlertBox").textContent=`تم تأكيد ركوب ${r.name||"الراكب"} بنجاح.`;
+        }
+      });
+    }
+
+    if(state.role==="rider"){
+      const badge=$("riderStatusBadge"),fb=$("riderFeedbackBox");
+      if(state.rider.status==="boarded"){badge.textContent="✓ تم الركوب";badge.className="badge b-boarded";fb.className="alert-banner alert-ok";fb.textContent="تم تسجيل ركوبك وإرسال نغمة التأكيد للسواق.";}
+      else if(state.rider.status==="missed"){badge.textContent="! فوتني";badge.className="badge b-missed";fb.className="alert-banner alert-alarm";fb.textContent="تم تشغيل إنذار صوتي مستمر عند السواق لإبلاغه أنك لم تركب.";}
+      else if(state.rider.status==="waiting"){badge.textContent="مستنيك";badge.className="badge b-waiting";fb.className="alert-banner alert-warn";fb.textContent=`تم إرسال إشارة أنك تنتظر عند ${activeStop.name} لينادى باسمك عند السواق.`;}
+      else{badge.textContent="في الانتظار";badge.className="badge b-idle";fb.className="alert-banner alert-info";fb.textContent=`محطتك المحددة: ${activeStop.name}. تابع موقع السواق أو اضغط "أنا مستنيك دلوقتي".`;}
+    }
+  }
+
+  function selectRole(role){
+    ensureAudio();state.role=role;
+    $("roleScreen").classList.add("hidden");$("appScreen").classList.remove("hidden");$("btnSwitchRole").classList.remove("hidden");
+    $("driverPanel").classList.toggle("hidden",role!=="driver");$("riderPanel").classList.toggle("hidden",role!=="rider");
+    setTimeout(()=>map.invalidateSize(),120);pullStateFromCloud().then(evaluateAlertsAndUI);
+    if(role==="rider")saveRiderProfile(false);
+  }
+  function stopGpsTracking(){
+    if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
+    state.driver.active=false;$("btnStartGps").classList.remove("hidden");$("btnStopGps").classList.add("hidden");pushStateToCloud();
+  }
+  function startGpsTracking(){
+    ensureAudio();
+    if(!("geolocation" in navigator)){alert("المتصفح على هذا الجهاز لا يدعم GPS.");return;}
+    if(gpsWatchId!==null)navigator.geolocation.clearWatch(gpsWatchId);
+    state.driver.active=true;$("btnStartGps").classList.add("hidden");$("btnStopGps").classList.remove("hidden");
+    $("driverAlertBox").className="alert-banner alert-ok";$("driverAlertBox").textContent="جاري بث موقعك الفعلي وسرعتك عبر الـGPS...";
+    gpsWatchId=navigator.geolocation.watchPosition(pos=>{
+      const {latitude,longitude,speed}=pos.coords;
+      state.driver.lat=latitude;state.driver.lng=longitude;
+      state.driver.speedKmh=typeof speed==="number"&&Number.isFinite(speed)&&speed>0?speed*3.6:0;
+      state.driver.updatedAt=Date.now();evaluateAlertsAndUI();pushStateToCloud();
+    },err=>{
+      $("driverAlertBox").className="alert-banner alert-warn";
+      $("driverAlertBox").textContent="تعذر قراءة الـGPS ("+err.message+"). تأكد من تفعيل الموقع والسماح للمتصفح.";
+    },{enableHighAccuracy:true,maximumAge:1500,timeout:10000});
+    pushStateToCloud();
+  }
+
+  function saveRiderProfile(notify){
+    state.rider.name=$("riderNameInput").value.trim()||"عمرو";
+    state.rider.stopId=stopSelect.value;state.rider.alertMeters=Math.max(100,Number($("alertMetersInput").value||500));
+    state.rider.note=$("riderNoteInput").value.trim();state.rider.updatedAt=Date.now();
+    localStorage.setItem("gesr_rider_name",state.rider.name);localStorage.setItem("gesr_rider_stop",state.rider.stopId);
+    localStorage.setItem("gesr_alert_meters",String(state.rider.alertMeters));localStorage.setItem("gesr_rider_note",state.rider.note);
+    state.ridersMap[state.rider.id]={...state.rider};evaluateAlertsAndUI();pushStateToCloud();
+    if(notify){playChime("call");alert("تم حفظ بياناتك ومحطتك على الرحلة.");}
+  }
+
+  $("pickDriver").addEventListener("click",()=>selectRole("driver"));
+  $("pickRider").addEventListener("click",()=>selectRole("rider"));
+  $("btnSwitchRole").addEventListener("click",()=>{stopGpsTracking();stopAlarmLoop();state.role=null;$("appScreen").classList.add("hidden");$("roleScreen").classList.remove("hidden");$("btnSwitchRole").classList.add("hidden");});
+  $("btnStartGps").addEventListener("click",startGpsTracking);
+  $("btnStopGps").addEventListener("click",stopGpsTracking);
+
+  $("customPhraseInput").addEventListener("input",updateSpeechPreview);
+  $("riderNameInput").addEventListener("input",updateSpeechPreview);
+  $("riderStopSelect").addEventListener("change",updateSpeechPreview);
+  $("riderNoteInput").addEventListener("input",updateSpeechPreview);
+
+  $("btnTestVoice").addEventListener("click",()=>{ensureAudio();const txt=$("speechPreviewText").textContent.trim();state.driver.phrase=$("customPhraseInput").value.trim()||DEFAULT_PHRASE;localStorage.setItem("gesr_phrase",state.driver.phrase);playChime("call");speakArabic(txt);pushStateToCloud();});
+  $("btnSavePhrase").addEventListener("click",()=>{ensureAudio();const val=$("customPhraseInput").value.trim()||DEFAULT_PHRASE;state.driver.phrase=val;localStorage.setItem("gesr_phrase",val);updateSpeechPreview();playChime("ok");speakArabic($("speechPreviewText").textContent.trim());pushStateToCloud();});
+  $("btnAckAlert").addEventListener("click",()=>{stopAlarmLoop();state.driver.alertActive=false;$("btnAckAlert").classList.add("hidden");$("driverAlertBox").className="alert-banner alert-info";$("driverAlertBox").textContent="تم إيقاف الإنذار وتأكيد استلام التنبيه.";pushStateToCloud();});
+
+  $("btnSaveRiderProfile").addEventListener("click",()=>saveRiderProfile(true));
+  $("btnUseMyLoc").addEventListener("click",()=>{
+    if(!("geolocation" in navigator)){alert("GPS غير متاح على هذا المتصفح.");return;}
+    navigator.geolocation.getCurrentPosition(pos=>{
+      state.rider.lat=pos.coords.latitude;state.rider.lng=pos.coords.longitude;
+      let bestStop=STOPS[0],bestDist=Infinity;
+      STOPS.forEach(s=>{const d=haversineMeters(pos.coords.latitude,pos.coords.longitude,s.lat,s.lng);if(d<bestDist){bestDist=d;bestStop=s;}});
+      stopSelect.value=bestStop.id;saveRiderProfile(false);map.setView([pos.coords.latitude,pos.coords.longitude],15);
+    },err=>alert("تعذر تحديد موقعك: "+err.message),{enableHighAccuracy:true});
+  });
+  $("btnCallDriver").addEventListener("click",()=>{ensureAudio();saveRiderProfile(false);state.rider.status="waiting";state.rider.callCounter=(state.rider.callCounter||0)+1;localStorage.setItem("gesr_call_counter",String(state.rider.callCounter));state.ridersMap[state.rider.id]={...state.rider};playChime("call");evaluateAlertsAndUI();pushStateToCloud();});
+  $("btnBoarded").addEventListener("click",()=>{ensureAudio();saveRiderProfile(false);state.rider.status="boarded";state.ridersMap[state.rider.id]={...state.rider};playChime("ok");evaluateAlertsAndUI();pushStateToCloud();});
+  $("btnMissedBus").addEventListener("click",()=>{ensureAudio();saveRiderProfile(false);state.rider.status="missed";state.rider.callCounter=(state.rider.callCounter||0)+1;localStorage.setItem("gesr_call_counter",String(state.rider.callCounter));state.ridersMap[state.rider.id]={...state.rider};playChime("alarm");evaluateAlertsAndUI();pushStateToCloud();});
+
+  $("btnRunSelfCheck").addEventListener("click",()=>{
+    ensureAudio();const gpsOk="geolocation" in navigator,ttsOk="speechSynthesis" in window;
+    const arVoices=ttsOk?(window.speechSynthesis.getVoices()||[]).filter(v=>(v.lang||"").toLowerCase().startsWith("ar")).length:0;
+    const isSecure=window.isSecureContext||location.protocol==="https:";
+    $("selfCheckOutput").classList.remove("hidden");
+    $("selfCheckOutput").innerHTML=
+      `<strong>• اتصال آمن (HTTPS):</strong> ${isSecure?"✓ ممتاز":"✗ غير متاح"}<br>`+
+      `<strong>• خدمة GPS:</strong> ${gpsOk?"✓ متاحة":"✗ غير متاحة"}<br>`+
+      `<strong>• النطق الصوتي:</strong> ${ttsOk?"✓ متاح":"✗ غير متاح"}<br>`+
+      `• أصوات عربية: ${arVoices}<br>`+
+      `<strong>• كود الرحلة النشط:</strong> ${escapeHtml(state.roomCode)}`;
+    playChime("ok");
+  });
+
+  const modal=$("roomModal");
+  $("btnOpenRoomModal").addEventListener("click",()=>{ $("modalRoomInput").value=state.roomCode;$("modalFirebaseUrl").value=state.firebaseUrl;modal.classList.remove("hidden"); });
+  $("btnCloseModal").addEventListener("click",()=>modal.classList.add("hidden"));
+  $("btnCopyRoom").addEventListener("click",()=>{
+    const code=($("quickRoomInput").value||"GESR 2026").trim().toUpperCase();
+    state.roomCode=code;localStorage.setItem("gesr_room_code",code);$("topRoomCode").textContent=code;
+    navigator.clipboard?.writeText(code).catch(()=>{});alert("تم نسخ كود الرحلة: "+code);
+  });
+  $("quickRoomInput").addEventListener("change",e=>{
+    state.roomCode=(e.target.value||"GESR 2026").trim().toUpperCase();localStorage.setItem("gesr_room_code",state.roomCode);
+    $("topRoomCode").textContent=state.roomCode;pullStateFromCloud();
+  });
+  $("btnApplyRoomSettings").addEventListener("click",()=>{
+    const newCode=($("modalRoomInput").value||"GESR 2026").trim().toUpperCase();
+    const newFb=($("modalFirebaseUrl").value||"").trim().replace(/\/+$/,"");
+    state.roomCode=newCode;state.firebaseUrl=newFb;localStorage.setItem("gesr_room_code",newCode);localStorage.setItem("gesr_fb_url",newFb);
+    $("topRoomCode").textContent=newCode;$("quickRoomInput").value=newCode;modal.classList.add("hidden");pullStateFromCloud().then(()=>pushStateToCloud());
+  });
+  $("btnResetDefaultRoom").addEventListener("click",()=>{
+    state.roomCode="GESR 2026";state.firebaseUrl="";localStorage.setItem("gesr_room_code","GESR 2026");localStorage.removeItem("gesr_fb_url");
+    $("modalRoomInput").value="GESR 2026";$("modalFirebaseUrl").value="";$("topRoomCode").textContent="GESR 2026";$("quickRoomInput").value="GESR 2026";
+  });
+
+  pullStateFromCloud().then(evaluateAlertsAndUI);
+})();
+</script>
+</body>
+</html>
