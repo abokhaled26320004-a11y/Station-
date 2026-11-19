@@ -660,47 +660,71 @@
 })();
 </script>
   <script>
+<script>
 (function () {
   const DRIVER_PIN = "0122";
-  const LOCK_KEY = "station_role_lock_v2";
+  const LOCK_KEY = "station_role_lock_v3";
 
-  document.addEventListener("click", function (e) {
-    const btn = e.target.closest("button, [role='button'], label, input[type='radio']");
-    if (!btn) return;
+  document.addEventListener("pointerdown", handleSelect, true);
+  document.addEventListener("click", handleSelect, true);
 
-    const label = (btn.innerText || btn.value || "").trim();
-    const isDriver = /سائق|السواق|سواقة|driver/i.test(label);
-    const isPassenger = /راكب|الراكب|passenger/i.test(label);
+  function handleSelect(e) {
+    let el = e.target;
+    let role = null;
+
+    while (el && el !== document.body) {
+      const txt = (el.innerText || "").trim();
+      const hasDriverTitle = txt.startsWith("أنا السواق") || (txt.includes("أنا السواق") && !txt.includes("أنا راكب"));
+      const hasPassengerTitle = txt.startsWith("أنا راكب") || (txt.includes("أنا راكب") && !txt.includes("أنا السواق"));
+
+      if (hasDriverTitle && txt.length < 250) {
+        role = "driver";
+        break;
+      }
+      if (hasPassengerTitle && txt.length < 250) {
+        role = "passenger";
+        break;
+      }
+      el = el.parentElement;
+    }
+
+    if (!role) return;
+
     const lockedRole = localStorage.getItem(LOCK_KEY);
 
-    if (isDriver && lockedRole === "passenger") {
+    if (role === "driver" && lockedRole === "passenger") {
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
       alert("هذا الجهاز مثبت على وضع الراكب ولا يمكن تحويله إلى سائق.");
       return;
     }
 
-    if (isPassenger && lockedRole === "driver") {
+    if (role === "passenger" && lockedRole === "driver") {
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
       alert("هذا الجهاز مثبت على وضع السائق ولا يمكن تغييره إلى راكب.");
       return;
     }
 
-    if (isDriver && lockedRole !== "driver") {
+    if (role === "driver" && lockedRole !== "driver") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.type === "pointerdown") return;
+
       const pin = prompt("أدخل الرقم السري الخاص بالسائق:");
       if (pin !== DRIVER_PIN) {
-        e.preventDefault();
-        e.stopPropagation();
         alert("الرقم السري غير صحيح.");
         return;
       }
       localStorage.setItem(LOCK_KEY, "driver");
-    } else if (isPassenger && !lockedRole) {
+      el.click();
+    } else if (role === "passenger" && !lockedRole) {
       localStorage.setItem(LOCK_KEY, "passenger");
     }
-  }, true);
+  }
 })();
+</script>
+
 </script>
 
 </body>
